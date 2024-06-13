@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>View User</title>
+    <script src="/static/js/jquery-3.5.1.js"></script>
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script src="/static/js/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            background-color: #343a40; /* Set the background color to match the footer */
+            color: #fff; /* Set text color to white for better readability on dark background */
+        }
+        footer {
+            width: 100%;
+            background-color: #343a40;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+            margin-top: 20px;
+        }
+        footer a {
+            color: #ffcc00;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        .table-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+        .table {
+            width: 100%;
+            table-layout: auto;
+        }
+        .container {
+            background-color: #fff;
+            color: #000;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Hi, {{ username }}</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_manage_users') }}">Manage Users</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_add_user') }}">Add User</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_view_user', user_id=session['user_id']) }}">View My Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mt-4">View User - {{ user.username }}</h2>
+
+        <div class="table-container">
+            <table id="userTable" class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Check-in Count</th>
+                        <th>Total Distance</th>
+                        <th>Active</th>
+                        <th>Admin</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td><input type="text" class="form-control" id="username-{{ user.id }}" value="{{ user.username }}" readonly></td>
+                        <td><input type="password" class="form-control" id="password-{{ user.id }}" placeholder="New Password"></td>
+                        <td><input type="number" class="form-control" id="checkin_count-{{ user.id }}" value="{{ user.checkin_count }}"></td>
+                        <td><input type="number" step="0.1" class="form-control" id="total_distance-{{ user.id }}" value="{{ user.total_distance }}"></td>
+                        <td>
+                            <button class="btn {% if user.is_active %}btn-success{% else %}btn-danger{% endif %} btn-sm" onclick="toggleActive({{ user.id }})">
+                                {% if user.is_active %}Activated{% else %}Activate{% endif %}
+                            </button>
+                        </td>
+                        <td>
+                            <button class="btn {% if user.is_admin %}btn-success{% else %}btn-secondary{% endif %} btn-sm" onclick="toggleAdmin({{ user.id }})">
+                                Admin
+                            </button>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" onclick="updateUser({{ user.id }})">Update</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="mt-4">Check-in Records</h3>
+        <div class="table-container">
+            <table id="checkinTable" class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Distance</th>
+                        <th>Verified</th>
+                        <th>Verified By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for checkin in checkins %}
+                    <tr>
+                        <form method="POST" action="{{ url_for('admin_edit_checkin', checkin_id=checkin.id) }}">
+                            <td>{{ checkin.timestamp }}</td>
+                            <td><input type="number" step="0.1" class="form-control" name="distance" value="{{ checkin.distance }}"></td>
+                            <td><input type="checkbox" name="verified" {% if checkin.verified %}checked{% endif %}></td>
+                            <td><input type="text" class="form-control" name="verified_by" value="{{ checkin.verified_by }}"></td>
+                            <td>
+                                <button type="submit" class="btn btn-warning btn-sm">Update</button>
+                                <a href="{{ url_for('admin_delete_checkin', checkin_id=checkin.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this check-in record?');">Delete</a>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-info mt-3" onclick="syncCheckinData({{ user.id }})">Sync</button>
+        <button class="btn btn-danger mt-3" onclick="showDeleteModal({{ user.id }})">Delete Account</button>
+
+        <!-- Delete Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Delete Account</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="deleteForm">
+                            <div class="form-group">
+                                <label for="adminPassword">Enter your password to confirm:</label>
+                                <input type="password" class="form-control" id="adminPassword" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteAccount({{ user.id }})">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        © <a href="https://github.com/EveryStepCounts" target="_blank">EveryStepCounts</a> | <a href="https://blog.nus.edu.sg/nightrunners/" target="_blank">NUS Night Runners</a> | <a href="https://enterprise.nus.edu.sg/personal-data-protection-notice/" target="_blank">PDPA</a> <br>
+        Powered by: NUS Computing UNIX Cluster
+    </footer>
+
+    <script>
+        $(document).ready(function() {
+            $('#checkinTable').DataTable({
+                "pagingType": "full_numbers",
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "responsive": true
+            });
+        });
+
+        function updateUser(userId) {
+            const password = document.getElementById(`password-${userId}`).value;
+            const checkinCount = document.getElementById(`checkin_count-${userId}`).value;
+            const totalDistance = document.getElementById(`total_distance-${userId}`).value;
+
+            $.post({
+                url: "{{ url_for('admin_edit_user', user_id=user.id) }}",
+                data: {
+                    password: password,
+                    checkin_count: checkinCount,
+                    total_distance: totalDistance
+                },
+                success: function(response) {
+                    alert("User updated successfully");
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+        function toggleActive(userId) {
+            $.post({
+                url: "{{ url_for('toggle_active') }}",
+                data: { user_id: userId },
+                success: function(response) {
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+        function toggleAdmin(userId) {
+            $.post({
+                url: "{{ url_for('toggle_admin') }}",
+                data: { user_id: userId },
+                success: function(response) {
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+        function syncCheckinData(userId) {
+            $.post({
+                url: "{{ url_for('sync_checkin_data') }}",
+                data: { user_id: userId },
+                success: function(response) {
+                    alert("Check-in data synced successfully");
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+        function showDeleteModal(userId) {
+            $('#deleteModal').modal('show');
+        }
+
+        function deleteAccount(userId) {
+            const adminPassword = document.getElementById('adminPassword').value;
+
+            $.post({
+                url: "{{ url_for('delete_account') }}",
+                data: {
+                    user_id: userId,
+                    admin_password: adminPassword
+                },
+                success: function(response) {
+                    alert("Account deleted successfully");
+                    window.location.href = "{{ url_for('admin_dashboard') }}";
+                },
+                error: function(xhr, status, error) {
+                    alert("Failed to delete account: " + xhr.responseText);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

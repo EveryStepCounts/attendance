@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Login</title>
+    <style>
+        body {
+            background-color: #343a40;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background-color: #fff;
+            color: #000;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: calc(100% - 40px);
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+        .login-container h2 {
+            margin-bottom: 20px;
+        }
+        .login-container img {
+            margin-bottom: 15px;
+        }
+        footer {
+            width: 100%;
+            background-color: #343a40;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        footer a {
+            color: #ffcc00;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        .logo {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 400px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
+		<br>
+        <div class="login-container">
+            <h2>Login</h2>
+            <form method="POST" action="{{ url_for('login') }}">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control", size=32) }}
+                </div>
+                <div class="form-group">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", size=32) }}
+                </div>
+                <div class="form-group">
+                    <div class="d-flex align-items-center">
+                        <img src="data:image/png;base64,{{ captcha_image }}" alt="Captcha" id="captcha-image">
+                        <a href="#" onclick="refreshCaptcha(event)" class="ml-2">Refresh Captcha</a>
+                    </div>
+                    {{ form.captcha.label(class="form-label") }}
+                    {{ form.captcha(class="form-control", size=32) }}
+                </div>
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary btn-block") }}
+                </div>
+            </form>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert alert-info mt-3">
+                        <ul class="mb-0">
+                            {% for message in messages %}
+                                <li>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+    <footer>
+        © <a href="https://github.com/EveryStepCounts" target="_blank">EveryStepCounts</a> | <a href="https://blog.nus.edu.sg/nightrunners/" target="_blank">NUS Night Runners</a> | <a href="https://enterprise.nus.edu.sg/personal-data-protection-notice/" target="_blank">PDPA</a> <br>
+        Powered by: NUS Computing UNIX Cluster
+    </footer>
+
+    <script>
+        function refreshCaptcha(event) {
+            event.preventDefault();
+            fetch('{{ url_for('refresh_captcha') }}')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('captcha-image').src = 'data:image/png;base64,' + data.captcha_image;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

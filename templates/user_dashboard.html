@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>User Dashboard</title>
+    <script src="/static/js/jquery-3.5.1.js"></script>
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script src="/static/js/chart.js"></script>
+    <style>
+        body {
+            background-color: #343a40; /* Set the background color to match the footer */
+            color: #fff; /* Set text color to white for better readability on dark background */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        footer {
+            width: 100%;
+            background-color: #343a40;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        footer a {
+            color: #ffcc00;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        .table-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+        .table {
+            width: 100%;
+            table-layout: auto;
+        }
+        .logo {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 400px;
+            height: auto;
+        }
+        .container {
+            background-color: #fff;
+            color: #000;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px auto;
+            max-width: 400px; /* Ensure consistent max-width */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: calc(100% - 40px); /* Ensure there is space around the container */
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
+        <div class="container">
+            <h2 class="mt-4">Hi, {{ user.username }}</h2>
+            <p>User ID: {{ user.id }}</p>
+            <p>Check-in Count: {{ user.checkin_count }}</p>
+            <p>Total Distance: {{ user.total_distance }} km</p>
+            
+            <h3 class="mt-4">Enter Today's Distance</h3>
+            <form method="POST" action="{{ url_for('user_dashboard') }}" class="form-inline">
+                {{ form.hidden_tag() }}
+                <div class="form-group mb-2">
+                    <label class="sr-only">{{ form.distance.label }}</label>
+                    {% for value, label in form.distance.choices %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="distance" value="{{ value }}" required>
+                            <label class="form-check-label">{{ label }}</label>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary mb-2 ml-2">Submit Distance</button>
+            </form>
+
+            {% if qrcode_image %}
+            <h3 class="mt-4">Your QR Code</h3>
+            <div class="text-center">
+                <img src="data:image/png;base64,{{ qrcode_image }}" alt="QR Code" class="img-fluid">
+                <p>Distance: {{ form.distance.data }} km</p>
+            </div>
+            {% endif %}
+
+            <h3 class="mt-4">Your Activity Chart</h3>
+            <canvas id="activityChart" width="400" height="200"></canvas>
+            
+            <h3 class="mt-4">Distance Distribution</h3>
+            <canvas id="pieChart" width="400" height="200"></canvas>
+            
+            <h3 class="mt-4">Your Check-in Records</h3>
+            <div class="table-container">
+                <table id="checkinTable" class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Distance</th>
+                            <th>Verified By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for checkin in checkins %}
+                        <tr>
+                            <td>{{ checkin.timestamp }}</td>
+                            <td>{{ checkin.distance }} km</td>
+                            <td>{{ checkin.verified_by }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {{ pagination.links }}
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert alert-info mt-4">
+                        <ul class="mb-0">
+                            {% for message in messages %}
+                                <li>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+    
+    <footer>
+        © <a href="https://github.com/EveryStepCounts" target="_blank">EveryStepCounts</a> | <a href="https://blog.nus.edu.sg/nightrunners/" target="_blank">NUS Night Runners</a> | <a href="https://enterprise.nus.edu.sg/personal-data-protection-notice/" target="_blank">PDPA</a> <br>
+        Powered by: NUS Computing UNIX Cluster
+    </footer>
+
+    <script>
+        $(document).ready(function() {
+            $('#checkinTable').DataTable({
+                "pagingType": "full_numbers",
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "responsive": true
+            });
+        });
+
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        const activityChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ labels|tojson }},
+                datasets: [{
+                    label: 'Total Distance (km)',
+                    data: {{ distances|tojson }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        const pieChart = new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: ['1 km', '2 km', '3 km', '4 km', '5 km'],
+                datasets: [{
+                    label: 'Distance Distribution',
+                    data: {{ distance_distribution|tojson }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    </script>
+</body>
+</html>

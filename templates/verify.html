@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Verify Distance</title>
+</head>
+<body>
+    <div class="container">
+        <h2>Verify User Distance</h2>
+        <form method="POST" action="{{ url_for('verify') }}">
+            {{ form.hidden_tag() }}
+            <div>
+                {{ form.checkin_id.label }}<br>
+                {{ form.checkin_id(size=32) }}<br>
+            </div>
+            <div>
+                {{ form.submit() }}
+            </div>
+        </form>
+    </div>
+</body>
+</html>
